@@ -8,9 +8,26 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\GetCollection;
+use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Serializer\Annotation\SerializedName;
+use ApiPlatform\Metadata\Post;
+use App\State\UserProcessor;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
-#[ApiResource]
+#[ApiResource(
+    operations: [
+        new GetCollection(
+            uriTemplate: '/users',
+            normalizationContext: ['groups' => 'users.read']
+        ),
+        new post(
+            uriTemplate: '/users-add',
+            denormalizationContext: ['groups' => 'user.write'],
+            processor: UserProcessor::class
+        )
+    ]
+)]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
@@ -19,9 +36,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?int $id = null;
 
     #[ORM\Column(length: 180, unique: true)]
+    #[Groups(['users.read','user.write'])]
     private ?string $email = null;
 
     #[ORM\Column]
+    #[Groups(['users.read'])]
     private array $roles = [];
 
     /**
@@ -31,9 +50,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?string $password = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['users.read','user.write'])]
     private ?string $firstname = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['users.read','user.write'])]
     private ?string $lastname = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
@@ -44,7 +65,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\ManyToOne(inversedBy: 'users')]
     #[ORM\JoinColumn(nullable: false)]
+    #[Groups(['user.write'])]
     private ?Groupes $Groupes = null;
+
+    #[SerializedName('password')]
+    #[Groups(['user.write'])]
+    private ?string $plainPassword = null;
 
     public function getId(): ?int
     {
@@ -172,6 +198,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setGroupes(?Groupes $Groupes): self
     {
         $this->Groupes = $Groupes;
+
+        return $this;
+    }
+
+    public function getPlainPassword(): ?string
+    {
+        return $this->plainPassword;
+    }
+
+    public function setPlainPassword(string $plainPassword): self
+    {
+        $this->plainPassword = $plainPassword;
 
         return $this;
     }
